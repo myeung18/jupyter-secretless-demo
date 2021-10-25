@@ -1,0 +1,10 @@
+# - jupyter/scipy-notebook (as defined in https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html#jupyter-scipy-notebook)
+
+FROM jupyter/scipy-notebook
+
+WORKDIR /work
+
+RUN pip install boto3
+COPY *.py ./
+COPY *.ipynb ./
+#
