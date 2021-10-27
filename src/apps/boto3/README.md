@@ -29,15 +29,10 @@ docker run -d -it -p 3800:3800 simple-python:latest
 docker build -f Dockerfile.jup -t quay.io/myeung/os-climate-poc-app:0.1 .
 ```
 
-oc get cm dap-config -n cyberlab -o yaml | sed "s/namespace: cyberlab/namespace: user3/" | oc apply -f - -n user3
+oc get cm dap-config -n cyberlab -o yaml | sed "s/namespace: cyberlab/namespace: jupyterhub/" | oc apply -f - -n jupyterhub
 oc create cm secretless-config --from-file=template/secretless.yaml -n user3
 
-oc exec -it os-climate-app-team1-848f9b5484-ndcgl -- bash -c "python secretless.py"
-
-
-Jupyter on OpenShift Part 3: Creating a S2I Builder Image
-  -  https://cloud.redhat.com/blog/jupyter-on-openshift-part-3-creating-a-s2i-builder-image
-     https://cloud.redhat.com/blog/jupyter-openshift-part-2-using-jupyter-project-images?extIdCarryOver=true&sc_cid=7013a000002pop9AAA
+oc exec -it os-climate-app-team3-simple-594b97c5b-52789 -- bash -c "python secretless.py"
 
 
 [jupyter notebook]

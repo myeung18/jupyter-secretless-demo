@@ -1,0 +1,212 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    alpha.image.policy.openshift.io/resolve-names: '*'
+    hub.jupyter.org/username: opentlc-mgr
+    k8s.v1.cni.cncf.io/network-status: |-
+      [{
+          "name": "openshift-sdn",
+          "interface": "eth0",
+          "ips": [
+              "10.131.0.26"
+          ],
+          "default": true,
+          "dns": {}
+      }]
+    k8s.v1.cni.cncf.io/networks-status: |-
+      [{
+          "name": "openshift-sdn",
+          "interface": "eth0",
+          "ips": [
+              "10.131.0.26"
+          ],
+          "default": true,
+          "dns": {}
+      }]
+    openshift.io/scc: restricted
+  creationTimestamp: "2021-10-27T17:14:33Z"
+  labels:
+    app: jupyterhub
+    component: singleuser-server
+    jupyterhub.opendatahub.io/user: opentlc-2dmgr
+  name: jupyterhub-nb-opentlc-2dmgr
+  namespace: jupyterhub
+  resourceVersion: "3212567"
+  uid: bb7161c2-1c9a-49eb-bf17-ce260689a6d9
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: node-role.kubernetes.io/odh-notebook
+            operator: Exists
+  automountServiceAccountToken: false
+  containers:
+  - image: quay.io/myeung/secretless-broker:local
+    imagePullPolicy: IfNotPresent
+    name: secretless-broker
+    # args refer to values mounted from config map, populated from Conjur
+    args: ["-f", "/etc/secretless/secretless.yaml", "-debug"]
+    env:
+      - name: CONJUR_AUTHN_LOGIN
+        value: host/jupyterhub/notebooks-team3
+
+      # values from pod metadata
+      - name: MY_POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+      - name: MY_POD_NAMESPACE
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.namespace
+      - name: MY_POD_IP
+        valueFrom:
+          fieldRef:
+            fieldPath: status.podIP
+
+    # values from DAP config map
+      - name: CONJUR_VERSION
+        valueFrom:
+          configMapKeyRef:
+            name: dap-config
+            key: CONJUR_VERSION
+      - name: CONJUR_ACCOUNT
+        valueFrom:
+          configMapKeyRef:
+            name: dap-config
+            key: CONJUR_ACCOUNT
+      - name: CONJUR_APPLIANCE_URL
+        valueFrom:
+          configMapKeyRef:
+            name: dap-config
+            key: CONJUR_APPLIANCE_URL
+      - name: CONJUR_SSL_CERTIFICATE
+        valueFrom:
+          configMapKeyRef:
+            name: dap-config
+            key: CONJUR_FOLLOWER_CERTIFICATE
+      - name: CONJUR_AUTHN_URL
+        valueFrom:
+          configMapKeyRef:
+            name: dap-config
+            key: CONJUR_AUTHN_URL
+
+    volumeMounts:
+    - name: config
+      mountPath: "/etc/secretless"
+      readOnly: true
+
+  - args:
+    - start-singleuser.sh
+    - --ip=0.0.0.0
+    - --port=8080
+    env:
+    - name: JUPYTERHUB_API_TOKEN
+      value: 0f862c9a82ef4f258ad8dcdfba5b6fc6
+    - name: JPY_API_TOKEN
+      value: 0f862c9a82ef4f258ad8dcdfba5b6fc6
+    - name: JUPYTERHUB_ADMIN_ACCESS
+      value: "1"
+    - name: JUPYTERHUB_CLIENT_ID
+      value: jupyterhub-user-opentlc-mgr
+    - name: JUPYTERHUB_HOST
+    - name: JUPYTERHUB_OAUTH_CALLBACK_URL
+      value: /user/opentlc-mgr/oauth_callback
+    - name: JUPYTERHUB_USER
+      value: opentlc-mgr
+    - name: JUPYTERHUB_SERVER_NAME
+    - name: JUPYTERHUB_API_URL
+      value: http://jupyterhub:8081/hub/api
+    - name: JUPYTERHUB_ACTIVITY_URL
+      value: http://jupyterhub:8081/hub/api/users/opentlc-mgr/activity
+    - name: JUPYTERHUB_BASE_URL
+      value: /
+    - name: JUPYTERHUB_SERVICE_PREFIX
+      value: /user/opentlc-mgr/
+    - name: MEM_LIMIT
+      value: "1073741824"
+    - name: CPU_LIMIT
+      value: "1.0"
+    - name: JUPYTER_IMAGE_SPEC
+      value: s2i-minimal-notebook:v0.0.14
+    - name: JUPYTER_IMAGE
+      value: s2i-minimal-notebook:v0.0.14
+    - name: S3_ENDPOINT_URL
+      value: s3.odh.com
+    - name: S3_ENDPOINT_URL
+      value: s3.odh.com
+    - name: MEM_LIMIT
+      value: "2147483648"
+    - name: JUPYTERHUB_USER_NAME
+      value: opentlc-mgr
+    image: quay.io/thoth-station/s2i-minimal-py38-notebook@sha256:164f4d8bb5c6770b459bad72307da7514ef0a73882b93a6e93f8dd4df4eef167
+    imagePullPolicy: IfNotPresent
+    lifecycle: {}
+    name: notebook
+    ports:
+    - containerPort: 8080
+      name: notebook-port
+      protocol: TCP
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: "1"
+        memory: 1Gi
+    securityContext:
+      capabilities:
+        drop:
+        - KILL
+        - MKNOD
+        - SETGID
+        - SETUID
+      runAsGroup: 0
+      runAsUser: 1000670000
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /opt/app-root/src
+      name: data
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  imagePullSecrets:
+  - name: default-dockercfg-9z76h
+  nodeName: ip-10-0-140-187.us-east-2.compute.internal
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: OnFailure
+  schedulerName: default-scheduler
+  securityContext:
+    fsGroup: 1000670000
+    seLinuxOptions:
+      level: s0:c26,c10
+  serviceAccount: data-team3
+  serviceAccountName: data-team3
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoSchedule
+    key: odh/notebook
+    operator: Equal
+    value: "true"
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoSchedule
+    key: node.kubernetes.io/memory-pressure
+    operator: Exists
+  volumes:
+  - name: config
+    configMap:
+      name: secretless-config
+  - name: data
+    persistentVolumeClaim:
+      claimName: jupyterhub-nb-opentlc-2dmgr-pvc
